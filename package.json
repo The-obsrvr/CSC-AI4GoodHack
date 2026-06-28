@@ -1,0 +1,20 @@
+{
+  "name": "mutagent-helix-minimal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "csv-parse": "^7.0.0",
+    "dotenv": "^17.4.2",
+    "node-cron": "^4.5.0",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^9.0.1",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.1"
+  }
+}

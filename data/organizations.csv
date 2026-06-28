@@ -1,0 +1,8 @@
+id,name,type,country,region,is_nrw,focus_areas,notes
+1,BMZ,sponsor,Germany,Europe,true,"development,animal welfare",German ministry
+2,GIZ,partner,Germany,Europe,true,"development,training",implementation agency
+3,World Animal Protection,ngo,UK,Global,false,"animal welfare,policy",international NGO
+4,Donkey Sanctuary,ngo,UK,Global,false,"working animals,donkeys",relevant for Africa
+5,FAO,partner,UN,Global,false,"livestock,food security",UN agency
+6,WOAH,partner,Global,Global,false,"animal health,rabies",animal health authority
+7,Unknown,unknown,unknown,unknown,false,"unknown","unknown"
