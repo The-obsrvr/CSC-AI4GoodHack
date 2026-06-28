@@ -14,29 +14,69 @@ type RetrievalAgentOutput = {
   articles: RetrievedArticle[];
 };
 
-const KEYWORDS = [
-  "animal welfare",
-  "rabies",
-  "livestock",
-  "donkey",
-  "wildlife",
-  "poaching",
+const KEYWORD_GROUPS = [
+  ["Burundi", "Bujumbura", "Gitega", "Great Lakes", "East Africa", "Africa"],
+  ["funding", "grant", "call for proposals", "application", "deadline", "award", "donor", "foundation"],
+  ["development", "aid", "humanitarian", "ngo", "nonprofit", "civil society", "community"],
+  ["health", "malaria", "cholera", "ebola", "rabies", "vaccine", "nutrition", "maternal", "child health"],
+  ["education", "school", "training", "vocational", "youth", "children"],
+  ["women", "gender", "girls", "gbv", "violence", "rights"],
+  ["refugee", "migration", "displacement", "conflict", "security", "crisis"],
+  ["climate", "agriculture", "food security", "livelihood", "rural", "water", "sanitation"],
+  ["animal welfare", "livestock", "wildlife", "working animals", "donkey", "veterinary", "poaching"],
+  ["policy", "government", "election", "economy", "poverty", "human rights"]
+];
+
+const GEOGRAPHIC_KEYWORDS = [
+  "Burundi",
+  "Bujumbura",
+  "Gitega",
+  "Great Lakes",
+  "East Africa",
+  "Central Africa",
+  "Rwanda",
+  "Tanzania",
+  "Democratic Republic of Congo",
+  "DRC",
+  "Congo"
+];
+
+const FUNDING_KEYWORDS = [
   "funding",
   "grant",
-  "Burundi",
-  "East Africa",
-  "women",
-  "education",
-  "health"
+  "call for proposals",
+  "application",
+  "deadline",
+  "award",
+  "donor",
+  "foundation",
+  "scholarship",
+  "fellowship"
 ];
 
 const SEMANTIC_REFERENCE =
-  "Animal welfare and development cooperation in Burundi including health, education, gender, rural livelihoods and funding";
+  "Burundi and East Africa news, funding opportunities, development cooperation, humanitarian aid, health, education, gender equality, civil society, rural livelihoods, agriculture, animal welfare and human rights";
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
+const MIN_RELEVANCE_SCORE = 0.25;
+const MIN_SEMANTIC_RELEVANCE_WITHOUT_SIGNAL = 0.35;
 
 function normalize(value: string): string {
   return value.toLowerCase();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function keywordMatches(text: string, keyword: string): boolean {
+  const normalizedKeyword = normalize(keyword).trim();
+  const escapedKeyword = normalizedKeyword.split(/\s+/).map(escapeRegExp).join("\\s+");
+  const startsWithWord = /^[a-z0-9]/i.test(normalizedKeyword);
+  const endsWithWord = /[a-z0-9]$/i.test(normalizedKeyword);
+  const pattern = `${startsWithWord ? "\\b" : ""}${escapedKeyword}${endsWithWord ? "\\b" : ""}`;
+
+  return new RegExp(pattern, "i").test(text);
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -90,8 +130,20 @@ async function fetchEmbedding(text: string): Promise<number[]> {
 
 function keywordScore(article: Article): number {
   const text = normalize(`${article.title} ${article.text}`);
-  const matches = KEYWORDS.filter((keyword) => text.includes(normalize(keyword))).length;
-  return matches / KEYWORDS.length;
+  const matches = KEYWORD_GROUPS.filter((group) =>
+    group.some((keyword) => keywordMatches(text, keyword))
+  ).length;
+
+  return matches / KEYWORD_GROUPS.length;
+}
+
+function hasAnyKeyword(article: Article, keywords: string[]): boolean {
+  const text = normalize(`${article.title} ${article.text}`);
+  return keywords.some((keyword) => keywordMatches(text, keyword));
+}
+
+function hasBurundiRelevantSignal(article: Article): boolean {
+  return hasAnyKeyword(article, GEOGRAPHIC_KEYWORDS) || hasAnyKeyword(article, FUNDING_KEYWORDS);
 }
 
 function organizationScore(article: Article): { orgScore: number; matchedOrganizations: Organization[] } {
@@ -136,7 +188,12 @@ export async function RetrievalAgent(input: RetrievalAgentInput): Promise<Retrie
   );
 
   const articles = scored
-    .filter((article) => article.retrieval.relevanceScore >= 0.65)
+    .filter(
+      (article) =>
+        article.retrieval.relevanceScore >= MIN_RELEVANCE_SCORE &&
+        (hasBurundiRelevantSignal(article) ||
+          article.retrieval.semanticScore >= MIN_SEMANTIC_RELEVANCE_WITHOUT_SIGNAL)
+    )
     .sort((a, b) => b.retrieval.relevanceScore - a.retrieval.relevanceScore);
 
   return { articles };

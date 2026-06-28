@@ -13,7 +13,7 @@ type SendNewsletterOutput = {
   response: string;
 };
 
-function requireEnv(name: "GMAIL_USER" | "GMAIL_APP_PASSWORD"): string {
+function requireEnv(name: string): string {
   const value = process.env[name];
 
   if (!value) {
@@ -23,23 +23,48 @@ function requireEnv(name: "GMAIL_USER" | "GMAIL_APP_PASSWORD"): string {
   return value;
 }
 
+function smtpPort(): number {
+  const value = process.env.SMTP_PORT;
+  return value ? Number.parseInt(value, 10) : 465;
+}
+
+function smtpSecure(port: number): boolean {
+  const value = process.env.SMTP_SECURE;
+
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return port === 465;
+}
+
 export class GmailClient {
+  private readonly host: string;
+  private readonly port: number;
+  private readonly secure: boolean;
   private readonly user: string;
-  private readonly appPassword: string;
+  private readonly password: string;
 
   constructor() {
-    this.user = requireEnv("GMAIL_USER");
-    this.appPassword = requireEnv("GMAIL_APP_PASSWORD");
+    this.host = process.env.SMTP_HOST ?? "smtp.gmail.com";
+    this.port = smtpPort();
+    this.secure = smtpSecure(this.port);
+    this.user = process.env.SMTP_USER ?? requireEnv("GMAIL_USER");
+    this.password = process.env.SMTP_PASSWORD ?? requireEnv("GMAIL_APP_PASSWORD");
   }
 
   async sendNewsletter(input: SendNewsletterInput): Promise<SendNewsletterOutput> {
     const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
+      host: this.host,
+      port: this.port,
+      secure: this.secure,
       auth: {
         user: this.user,
-        pass: this.appPassword
+        pass: this.password
       }
     });
 

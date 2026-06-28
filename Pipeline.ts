@@ -12,6 +12,8 @@ type NewsletterDelivery = {
   response: string;
 };
 
+const DEFAULT_SOURCES = ["https://feeds.bbci.co.uk/news/rss.xml"];
+
 export type PipelineRunOutput = {
   report: ReportOutput;
   processedArticles: Article[];
@@ -33,11 +35,22 @@ function newsletterRecipients(): string | string[] | null {
   return recipients.length > 1 ? recipients : recipients[0] ?? null;
 }
 
+function parseCommaSeparatedEnv(name: string): string[] {
+  return (process.env[name] ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function sourceFeeds(): string[] {
+  return Array.from(new Set([...DEFAULT_SOURCES, ...parseCommaSeparatedEnv("GOOGLE_ALERTS_FEEDS")]));
+}
+
 export class Pipeline {
   async run(input: PipelineRunInput = {}): Promise<PipelineRunOutput> {
     await SourceAgent.initialize?.();
     const articles = await SourceAgent.process({
-      sources: ["https://feeds.bbci.co.uk/news/rss.xml"]
+      sources: sourceFeeds()
     });
     await SourceAgent.finalize?.();
 
